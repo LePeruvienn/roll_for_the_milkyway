@@ -1,4 +1,4 @@
-# roll_for_the_milkyway  
+# Roll for the milkyway  
 
 **par [Dimitri Watel](http://dimitri.watel.free.fr/)**
 
