@@ -10,8 +10,8 @@ I hope you enjoy it, if not you can still improve it 🤓
 
 Go see installation guides :
 
-- [VS Code](./vscode/README.md)
-- [VIM](./vim/README.md)
+- [VS Code](./vscode/)
+- [VIM](./vim/)
 
 ## Pictures
 
