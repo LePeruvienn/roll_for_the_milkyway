@@ -3,3 +3,6 @@ pyvenv.cfg
 lib/
 lib64/
 lib64
+
+src/**/__pycache__/
+html/results.json
