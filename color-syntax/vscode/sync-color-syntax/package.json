@@ -1,0 +1,25 @@
+{
+  "name": "sync-color-syntax",
+  "displayName": "SYNC color syntax",
+  "description": "color syntax for .sync files",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.107.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "sync",
+      "aliases": ["sync", "SYNC"],
+      "extensions": [".sync"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "sync",
+      "scopeName": "source.sync",
+      "path": "./syntaxes/sync.tmLanguage.json"
+    }]
+  }
+}

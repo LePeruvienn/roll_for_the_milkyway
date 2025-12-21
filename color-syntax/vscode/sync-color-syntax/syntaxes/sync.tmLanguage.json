@@ -1,0 +1,132 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "SYNC",
+  "scopeName": "source.sync",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#builtins" },
+    { "include": "#operators" },
+    { "include": "#functions" },
+    { "include": "#fields" },
+    { "include": "#identifiers" }
+  ],
+
+  "repository": {
+
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.sync",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.sync",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.sync",
+          "begin": "\"",
+          "end": "\""
+        }
+      ]
+    },
+
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.sync",
+          "match": "\\b\\d+\\b"
+        }
+      ]
+    },
+
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.sync",
+          "match": "\\b(IF|ELSE|ENDIF|FOR|ENDFOR)\\b"
+        },
+        {
+          "name": "keyword.other.sync",
+          "match": "\\b(FUNCTION|END|STRUCT|ENDSTRUCT|GLOBALS|ENDGLOBALS|RETURN)\\b"
+        }
+      ]
+    },
+
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.sync",
+          "match": "\\b(INT|FLOAT|BOOL|CHAR)\\b"
+        }
+      ]
+    },
+
+    "builtins": {
+      "patterns": [
+        {
+          "name": "support.function.sync",
+          "match": "\\b(PRINT|MALLOC_STRUCT|FREE)\\b"
+        }
+      ]
+    },
+
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.sync",
+          "match": "->"
+        },
+        {
+          "name": "keyword.operator.logical.sync",
+          "match": "\\b(AND|OR|NOT)\\b"
+        },
+        {
+          "name": "keyword.operator.sync",
+          "match": "[=+\\-*/<>]"
+        }
+      ]
+    },
+
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.sync",
+          "match": "\\bFUNCTION\\s+([A-Za-z_][A-Za-z0-9_]*)"
+        },
+        {
+          "name": "meta.function-call.sync",
+          "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\s*(?=\\()"
+        }
+      ]
+    },
+
+    "fields": {
+      "patterns": [
+        {
+          "name": "variable.other.member.sync",
+          "match": "(?<=->)[A-Za-z_][A-Za-z0-9_]*"
+        }
+      ]
+    },
+
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.sync",
+          "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+        }
+      ]
+    }
+  }
+}

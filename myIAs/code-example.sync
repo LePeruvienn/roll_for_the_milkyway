@@ -1,0 +1,71 @@
+/**
+* Programme qui simule un calendrier (sans année bisextile)
+*/
+GLOBALS
+  // Constantes correspondant au premier jour
+  cst_DAY = 29
+  cst_MONTH = 9
+  cst_YEAR = 2022
+
+ENDGLOBALS
+
+// Struture de date, permet d'accéder au jour, au mois et à l'année de la date
+STRUCT date
+    jour
+    mois
+    annee
+ENDSTRUCT
+
+/**
+* Incrémente la date de un jour. 
+*/
+FUNCTION incr(d)
+    j = d->jour
+    m = d->mois
+    a = d->annee
+
+    // Cas du dernier jour de l'année
+    IF(j == 31 AND m == 12)
+        a = a + 1
+        m = 1
+        j = 0 // On met à 0, le jour sera incrémenté dans le IF suivant
+    ENDIF
+
+    IF(j == 31 OR (j == 30 AND (m == 4 OR m == 6 OR m == 9 OR m == 11)) OR (j == 28 AND m == 2))
+        // Cas du dernier jour d'un mois
+        m = m + 1
+        j = 1
+    ELSE
+        // Autres cas
+        j = j + 1
+    ENDIF
+
+    d->jour = j
+    d->mois = m
+    d->annee = a
+END
+
+/**
+* Affiche la date d
+*/
+FUNCTION print_date(d)
+    PRINT(INT, d->jour, "/", INT, d->mois, "/", INT, d->annee, "\n")
+END
+
+FUNCTION main()
+    // On initialise la première date
+    d = MALLOC_STRUCT(date)
+    d->jour = cst_DAY
+    d->mois = cst_MONTH
+    d->annee = cst_YEAR
+    print_date(d)
+
+    // On incrémente 300 fois et on affiche la date associée
+    FOR(i;0;300)
+        incr(d)
+        print_date(d)
+    ENDFOR
+
+    // On libère la mémoire allouée
+    FREE(d)
+END
