@@ -6,14 +6,17 @@ I have made two small package for color syntax for `.sync` programming language.
 
 I hope you enjoy it, if not you can still improve it 🤓
 
-### Installation
+## Installation
 
 Go see installation guides :
 
 - [VS Code](./vscode/README.md)
 - [VIM](./vim/README.md)
 
-### Pictures
+## Pictures
 
-![VS Code](./img/vscode-colorsyntax.png)
-![VIM](./img/vim-colorsyntax.png)
+Colors **adapts depending on your theme/colorscheme**.
+
+|              VIM                 |               VS Code                     |
+|-----------------------------------|------------------------------------------|
+| ![VIM](./img/vim-colorsyntax.png) | ![VS Code](./img/vscode-colorsyntax.png) |
