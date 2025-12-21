@@ -8,6 +8,9 @@ Download the file [sync-color-syntax.zip](./sync-color-syntax.zip), it contains 
 
 - Open **VS Code** and click on the **extensions** panel.
 - In the panel go to the three dots (`...`) and click on `install from VSIX`.
-- Then you are ready to go 😎
+- Select the `sync-color-syntax-0.0.1.vsix` in the extension folder.
 
 ![installation](./installation.png)
+
+
+If all went well, you are now ready to go 😎
