@@ -1,6 +1,6 @@
 # VSCODE Installation Guide
 
-## 1) Download custom extension**
+## 1) Download custom extension
 
 Download the file [sync-color-syntax.zip](./sync-color-syntax.zip), it contains the custom extension files that you can also browser in the [sync-color-syntax](./sync-color-syntax/) folder.
 
