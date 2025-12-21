@@ -15,7 +15,7 @@ Go see installation guides :
 
 ## Pictures
 
-Colors **adapts depending on your theme/colorscheme**.
+Colors **adapts** depending on your **theme/colorscheme**.
 
 |              VIM                 |               VS Code                     |
 |-----------------------------------|------------------------------------------|

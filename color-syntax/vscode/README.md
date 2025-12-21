@@ -12,5 +12,6 @@ Download the file [sync-color-syntax.zip](./sync-color-syntax.zip), it contains 
 
 ![installation](./installation.png)
 
+---
 
 If all went well, you are now ready to go 😎
