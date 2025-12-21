@@ -10,10 +10,10 @@ I hope you enjoy it, if not you can still improve it 🤓
 
 Go see installation guides :
 
-- [VS Code]("./vscode/README.md")
-- [VIM]("./vim/README.md")
+- [VS Code](./vscode/README.md)
+- [VIM](./vim/README.md)
 
 ### Pictures
 
-[VS Code]("./img/vscode-colorsyntax.png")
-[VIM]("./img/vim-colorsyntax.png")
+![VS Code](./img/vscode-colorsyntax.png)
+![VIM](./img/vim-colorsyntax.png)
