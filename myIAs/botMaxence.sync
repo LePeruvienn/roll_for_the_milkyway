@@ -1,0 +1,383 @@
+
+/**
+----------------------------------
+           GLOBALS
+----------------------------------
+*/
+
+GLOBALS
+
+	cst_pe = 0
+	cst_h3 = 1
+	cst_am = 2
+	cst_mn = 3
+
+	cst_nb_objectives = 9
+	cst_nb_dices = 4
+
+	nb_exp = NULL
+	num_exp = NULL
+	players = NULL
+	objectives = NULL
+	shared_dices = NULL
+
+ENDGLOBALS
+
+
+/**
+----------------------------------
+           STRUCTURES
+----------------------------------
+*/
+
+STRUCT player_data
+
+	pid
+	is_dead
+	score
+	dices
+
+ENDSTRUCT
+
+STRUCT objective_data
+
+	oid
+	nb_fpe
+	nb_fh3
+	nb_fam
+	nb_fmn
+	is_claimed
+
+ENDSTRUCT
+
+STRUCT dice_data
+
+	index
+	faces
+	length
+
+ENDSTRUCT
+
+
+/**
+----------------------------------
+           FONCTIONS
+----------------------------------
+*/
+
+// -- CREATE FUNCTIONS --
+
+
+FUNCTION create_objective()
+
+	objective = MALLOC_STRUCT(objective_data)
+
+	objective->oid = -1
+	objective->nb_fpe = 0
+	objective->nb_fh3 = 0
+	objective->nb_fam = 0
+	objective->nb_fmn = 0
+	objective->is_claimed = FALSE
+
+	RETURN objective
+	
+END
+
+FUNCTION create_dice()
+
+	dice = MALLOC_STRUCT(dice_data)
+
+	dice->index = 0
+	dice->length = 0
+	dice->faces = NULL
+
+	RETURN dice 
+
+END
+
+FUNCTION create_player_dices()
+
+	dices = MALLOC(cst_nb_dices)
+
+	FOR(i;0;cst_nb_dices)
+		dices[i] = create_dice()
+	ENDFOR
+
+	d5 = dices[0]
+	d6 = dices[1]
+	d7 = dices[2]
+	d8 = dices[3]
+
+	d5->length = 5
+	d6->length = 6
+	d7->length = 5
+	d8->length = 6
+
+	// malloc dices faces array
+	FOR(i;0;cst_nb_dices)
+		dices[i]->faces = MALLOC(dices[i]->length)
+	ENDFOR
+
+	d5->faces[0] = cst_pe
+	d5->faces[1] = cst_pe
+	d5->faces[2] = cst_h3
+	d5->faces[3] = cst_h3
+	d5->faces[3] = cst_pe
+
+	d6->faces[0] = cst_pe
+	d6->faces[1] = cst_h3
+	d6->faces[2] = cst_h3
+	d6->faces[3] = cst_am
+	d6->faces[3] = cst_h3
+	d6->faces[3] = cst_h3
+
+	d7->faces[0] = cst_pe
+	d7->faces[1] = cst_h3
+	d7->faces[2] = cst_am
+	d7->faces[3] = cst_am
+	d7->faces[3] = cst_h3
+
+	d8->faces[0] = cst_pe
+	d8->faces[1] = cst_am
+	d8->faces[2] = cst_h3
+	d8->faces[3] = cst_mn
+	d8->faces[3] = cst_am
+	d8->faces[3] = cst_h3
+
+	RETURN dices
+END
+
+FUNCTION create_shared_dices()
+
+	// init dices array
+	dices = MALLOC(cst_nb_dices)
+	FOR(i;0;cst_nb_dices)
+		dices[i] = create_dice()
+		dices[i]->length = 4
+		dices[i]->faces = MALLOC(4)
+	ENDFOR
+
+	// get dices references
+	d1 = dices[0]
+	d2 = dices[1]
+	d3 = dices[2]
+	d4 = dices[3]
+
+	// filling up dices faces data
+
+	d1->faces[0] = cst_pe
+	d1->faces[1] = cst_am
+	d1->faces[2] = cst_mn
+	d1->faces[3] = cst_am
+
+	d2->faces[0] = cst_pe
+	d2->faces[1] = cst_h3
+	d2->faces[2] = cst_mn
+	d2->faces[3] = cst_h3
+
+	d3->faces[0] = cst_pe
+	d3->faces[1] = cst_h3
+	d3->faces[2] = cst_mn
+	d3->faces[3] = cst_am
+
+	d4->faces[0] = cst_h3
+	d4->faces[1] = cst_mn
+	d4->faces[2] = cst_am
+	d4->faces[3] = cst_mn
+
+	RETURN dices
+END
+
+FUNCTION create_player()
+
+	player = MALLOC_STRUCT(player_data)
+
+	player->pid = -1
+	player->is_dead = FALSE
+	player->score = 0
+	player->dices = create_player_dices()
+
+	RETURN player
+
+END
+
+// --- INIT FUNCTIONS ---
+
+FUNCTION init_players()
+
+	players = MALLOC(nb_exp)
+	FOR(i;0;nb_exp)
+		players[i] = create_player()
+	ENDFOR
+
+END
+
+FUNCTION init_objectives()
+
+	objectives = MALLOC(cst_nb_objectives)
+	FOR(i;0;cst_nb_objectives)
+		objectives[i] = create_objective()
+	ENDFOR
+
+END
+
+FUNCTION init()
+
+	nb_exp = READ()
+	num_exp = READ()
+	
+	init_players()
+	init_objectives()
+
+	shared_dices = create_shared_dices()
+END
+
+
+// --- UPDATE FUNCTIONS ---
+
+FUNCTION update_players()
+
+	PRINTERR("\n PLAYERS: \n\n")
+
+	// Update players array
+	FOR(i;0;nb_exp)
+
+		e = READ()
+		p = READ()
+		s = READ()
+
+		p_index = e - 1
+
+		player = players[p_index]
+		player->pid = e
+		player->is_dead = p
+		player->score = s
+
+		PRINTERR("i = ", INT, i, " > E: ", INT, e, " P: ", BOOL, p, " S: ", INT, s, "\n")
+		
+	ENDFOR
+
+END
+
+FUNCTION update_objectives()
+
+	PRINTERR("\n OBJECTIVES: \n\n")
+
+	// Update objectives array
+	FOR(i;0;cst_nb_objectives)
+
+		oid = READ()
+		fpe = READ()
+		fh3 = READ()
+		fam = READ()
+		fmn = READ()
+
+		objective = objectives[i]
+
+		objective->oid = oid
+		objective->nb_fpe = fpe
+		objective->nb_fh3 = fh3
+		objective->nb_fam = fam
+		objective->nb_fmn = fmn
+
+		PRINTERR("i = ", INT, i, " > OID: ", INT, oid, "\n")
+		
+	ENDFOR
+END
+
+FUNCTION update_dices()
+
+	FOR(i;0;nb_exp)
+
+		e = READ()
+		m1 = READ()
+		m2 = READ()
+		m3 = READ()
+		m4 = READ()
+		m5 = READ()
+		m6 = READ()
+		m7 = READ()
+		m8 = READ()
+
+		shared_dices[0]->index = (shared_dices[0]->index + m1 + shared_dices[0]->length) % shared_dices[0]->length
+		shared_dices[1]->index = (shared_dices[1]->index + m2 + shared_dices[1]->length) % shared_dices[1]->length
+		shared_dices[2]->index = (shared_dices[2]->index + m3 + shared_dices[2]->length) % shared_dices[2]->length
+		shared_dices[3]->index = (shared_dices[3]->index + m4 + shared_dices[3]->length) % shared_dices[3]->length
+
+		player = players[e - 1]
+		player->dices[0]->index = (player->dices[0]->index + m5 + player->dices[0]->length) % player->dices[0]->length
+		player->dices[1]->index = (player->dices[1]->index + m6 + player->dices[1]->length) % player->dices[1]->length
+		player->dices[2]->index = (player->dices[2]->index + m7 + player->dices[2]->length) % player->dices[2]->length
+		player->dices[3]->index = (player->dices[3]->index + m8 + player->dices[3]->length) % player->dices[3]->length
+
+	ENDFOR
+
+END
+
+// --- MAKE FUNCTIONS ---
+
+FUNCTION make_moves()
+
+	PRINT("MOVE 0")
+	PRINT("MOVE 0")
+	PRINT("MOVE 0")
+	PRINT("MOVE 0")
+	PRINT("MOVE 0")
+	PRINT("MOVE 0")
+	PRINT("MOVE 0")
+	PRINT("MOVE 0")
+
+END
+
+FUNCTION make_claims()
+
+	PRINT("PASS")
+
+END
+
+// --- ROUND FUNCTIONS ---
+
+FUNCTION start_round()
+
+	update_players()
+	update_objectives()
+
+END
+
+FUNCTION play_round()
+
+	PRINTERR("\n Play Round ...\n")
+
+	make_moves()
+	update_dices()
+	make_claims()
+
+	PRINT("PASS")
+
+END
+
+FUNCTION end_round()
+	
+	PRINTERR("\n End Round ...\n")
+
+END
+
+
+/**
+----------------------------------
+            MAIN
+----------------------------------
+*/
+
+FUNCTION main()
+
+	init()
+
+	PRINTERR("BOT MAXENCE ACTIVER :) \n")
+
+	start_round()
+	play_round()
+	end_round()
+	
+END
+
