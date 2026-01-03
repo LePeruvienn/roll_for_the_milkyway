@@ -328,6 +328,7 @@ FUNCTION update_scores()
 
 			objective = objectives[j]
 			
+			// TODO: DO IF GUARGS !! WITH BREAKS & CONTINUE !!!
 			IF(objective->oid == oid)
 
 				IF(objective->is_claimed == FALSE)
@@ -355,6 +356,72 @@ FUNCTION update_scores()
 
 END
 
+// -- OBJECTIVES FUNCTIONS
+
+FUNCTION can_be_claimed(objective)
+
+	// setting up elements counters
+	nb_fpe = 0
+	nb_fh3 = 0
+	nb_fam = 0
+	nb_fmn = 0
+
+	// count the number of elements is shared dices
+
+	FOR(i;0;cst_nb_dices)
+	
+		dice = shared_dices[i]
+		index = dice->index
+		faces = dice->faces
+		
+		IF(faces[index] == cst_pe)
+			nb_fpe = nb_fpe + 1
+
+		ELIF(faces[index] == cst_h3)
+			nb_fh3 = nb_fh3 + 1
+
+		ELIF(faces[index] == cst_am)
+			nb_fam = nb_fam + 1
+
+		ELIF(faces[index] == cst_mn)
+			nb_fmn = nb_fmn + 1
+
+		ENDIF
+
+	END
+		
+	// count the number of elements is player dices
+	player = players[num_exp - 1]
+	player_dices = player->dice;
+
+	FOR(i;0;cst_nb_dices)
+	
+		dice = player_dices[i]
+		index = dice->index
+		faces = dice->faces
+		
+		IF(faces[index] == cst_pe)
+			nb_fpe = nb_fpe + 1
+
+		ELIF(faces[index] == cst_h3)
+			nb_fh3 = nb_fh3 + 1
+
+		ELIF(faces[index] == cst_am)
+			nb_fam = nb_fam + 1
+
+		ELIF(faces[index] == cst_mn)
+			nb_fmn = nb_fmn + 1
+
+		ENDIF
+
+	END
+
+	// return the result
+	RETURN (nb_fpe >= objective->nb_fpe AND nb_fh3 >= objective->nb_fh3 AND nb_fam >= objective->nb_fam AND nb_fmn >= objective->nb_fmn)
+
+END
+
+
 // --- MAKE FUNCTIONS ---
 
 FUNCTION make_moves()
@@ -372,7 +439,37 @@ END
 
 FUNCTION make_claims()
 
-	PRINT("PASS")
+	best_objective = NULL
+
+	// Check all objectives !
+	FOR(i;0;cst_nb_objectives)
+
+		objective = objectives[i]
+
+		// IF objective cannot be claimed OR is already claimed, continue to the next one
+		IF(can_be_claimed(objective) == FALSE OR objective->is_claimed == TRUE)
+			CONTINUE
+		ENDIF
+
+		// IF we have no other option, just set it to the best objective and continue
+		IF(best_objective == NULL)
+			best_objective = objective
+			CONTINUE
+		ENDIF
+
+		// Compare both objective, if current object is better, set it as the best one !
+		IF(best_objective->oid < objective->oid)
+			best_objective = objective
+		ENDIF
+		
+	ENDFOR
+
+	// claim objective if we can !
+	IF(best_objective != NULL)
+		PRINT("CLAIM ", INT, best_objective->oid)
+	ELSE
+		PRINT("PASS")
+	ENDIF
 
 END
 
