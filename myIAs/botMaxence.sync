@@ -279,6 +279,7 @@ FUNCTION update_objectives()
 		objective->nb_fh3 = fh3
 		objective->nb_fam = fam
 		objective->nb_fmn = fmn
+		objective->is_claimed = FALSE
 
 		PRINTERR("i = ", INT, i, " > OID: ", INT, oid, "\n")
 		
@@ -314,6 +315,46 @@ FUNCTION update_dices()
 
 END
 
+FUNCTION update_scores()
+	
+	FOR(i;0;nb_exp)
+
+		e = READ()
+		oid = READ()
+
+		player = players[e - 1]
+
+		FOR (j;0;cst_nb_objectives)
+
+			objective = objectives[j]
+			
+			IF(objective->oid == oid)
+
+				IF(objective->is_claimed == FALSE)
+
+					objective->is_claimed = TRUE
+
+					IF(oid < 11)
+						player->score = player->score + 100
+					ELIF(oid < 21)
+						player->score = player->score + 150
+					ELSE
+						player->score = player->score + 200
+
+					ENDIF
+
+				ENDIF
+
+				BREAK
+
+			ENDIF
+
+		ENDFOR
+	
+	ENDFOR
+
+END
+
 // --- MAKE FUNCTIONS ---
 
 FUNCTION make_moves()
@@ -344,21 +385,19 @@ FUNCTION start_round()
 
 END
 
-FUNCTION play_round()
+// --- TURN FUNCTIONS ---
 
-	PRINTERR("\n Play Round ...\n")
+FUNCTION play_turn()
 
 	make_moves()
 	update_dices()
 	make_claims()
 
-	PRINT("PASS")
-
 END
 
-FUNCTION end_round()
-	
-	PRINTERR("\n End Round ...\n")
+FUNCTION end_turn()
+
+	update_scores()
 
 END
 
@@ -375,9 +414,16 @@ FUNCTION main()
 
 	PRINTERR("BOT MAXENCE ACTIVER :) \n")
 
-	start_round()
-	play_round()
-	end_round()
+	WHILE(TRUE)
+
+		start_round()
+
+		FOR(i;0;6)
+			play_turn()
+			end_turn()
+		ENDFOR
+
+	ENDWHILE
 	
 END
 
