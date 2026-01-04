@@ -19,6 +19,9 @@ GLOBALS
 	cst_nb_objectives = 9 // {int} amount of objectives in the game
 	cst_nb_dices = 4      // {int} amount of dices of shared_dices and also each player dices
 	cst_nb_moves = 8      // {int} amount of moves allowed each turn
+	cst_nb_elements = 4   // {int} amount of elements is in the game (can be used to go throught enum)
+
+	cst_infinite = -1     // {int} represent the infinity (used with unsigned int values only)
 
 	// globas vars, setted up at game initialization (init FUNCTION)
 
@@ -525,6 +528,75 @@ FUNCTION can_be_claimed(objective)
 
 	// return the result
 	RETURN (nb_fpe >= objective->nb_fpe AND nb_fh3 >= objective->nb_fh3 AND nb_fam >= objective->nb_fam AND nb_fmn >= objective->nb_fmn)
+
+END
+
+/**
+ * Get the amount of moves we must make to reach this objective
+ * @param {objective_data*} objective
+ * @return {int}
+ */
+FUNCTION get_amount_of_moves_needed(objective)
+
+	// copy objective data
+	nb_fpe = objective->nb_fpe
+	nb_fh3 = objective->nb_fh3
+	nb_fam = objective->nb_fam
+	nb_fmn = objective->nb_fmn
+
+	// get player dices
+	player = players[num_exp - 1]
+	player_dices = player->dices
+
+	FOR(i;0;cst_nb_dices)
+		dice = player_dices[i]
+
+	ENDFOR
+	
+END
+
+/**
+ * Get the distance of dice to move towards an element,
+ * it's the amount of movement a dice have to make to reach an element
+ * @param {dice_data*} dice
+ * @param {int} element (element enum : enum_pe | enum_h3 | enum_am | enum_mn)
+ * @return {int}
+ */
+FUNCTION get_dice_distance_from(dice, element)
+	
+	// copy current index
+	index = dice->index
+
+	// initialize amount (if not reachable it's infinite)
+	moves_amount = cst_infinite
+
+	// check each face of the dice
+	FOR(i;0;dice->length)
+
+		// compute index
+		index = (dice->index + i) % dice->length
+
+		// if it's not the element we are looking for, go next
+		IF(dice->faces[index] != element)
+			CONTINUE
+		ENDIF
+
+		// save current_moves_amount
+		current_moves_amount = i
+
+		// If it can be reached faster by going backwards, re computed moves amount
+		IF(i > dice->length / 2)
+			current_moves_amount = i - dice->length
+		ENDIF
+
+		// compare current and saves the less moves to reach the objective
+		IF(IABS(current_moves_amount) < IABS(moves_amount))
+			moves_amount = current_moves_amount
+		ENDIF
+
+	ENDFOR
+	
+	RETURN moves_amount
 
 END
 
