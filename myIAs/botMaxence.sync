@@ -21,7 +21,7 @@ GLOBALS
 	cst_nb_moves = 8      // {int} amount of moves allowed each turn
 	cst_nb_elements = 4   // {int} amount of elements is in the game (can be used to go throught enum)
 
-	cst_infinite = -1     // {int} represent the infinity (used with unsigned int values only)
+	cst_infinite = -9999  // {int} represent the infinity (used with unsigned int values only)
 
 	// globas vars, setted up at game initialization (init FUNCTION)
 
@@ -80,12 +80,59 @@ STRUCT dice_data
 
 ENDSTRUCT
 
+/**
+ * Reprent the data of moves on a list of dices (4 dices).
+ * Used to get the best moves to do on a set of dices to achieve an objective.
+ * IMPORTANT: use the `create_dices_moves_data` function to create a new dice data structure ptr
+ */
+STRUCT dices_moves_data
+
+	total_moves_amount // {int}  the total number of moves to reach the objective (or to be the closest to), default cst_infinite
+	moves_by_dice      // {int*} the moves by dice to do (the index is the dice index so, and the value is the moves to apply on the dices),
+	                   //        default array of int* of size cst_nb_dices filled with zeros
+
+ENDSTRUCT
+
 
 /**
 ----------------------------------
            FONCTIONS
 ----------------------------------
 */
+
+// -- UTILS FUNCTIONS --
+
+FUNCTION copy_array(array, size)
+
+	new_array = MALLOC(size)
+
+	FOR(i;0;size)
+		new_array[i] = array[i]
+	ENDFOR
+
+	RETURN new_array
+	
+END
+
+FUNCTION copy_dices_moves_data(source, dest)
+
+	dest->total_moves_amount = source->total_moves_amount
+	
+	FOR(i;0;cst_nb_dices)
+		dest->moves_by_dice[i] = source->moves_by_dice[i]
+	ENDFOR
+
+END
+
+FUNCTION reset_dices_moves_data(data)
+	
+	data->total_moves_amount = cst_infinite
+
+	FOR(i;0;cst_nb_dices)
+		data->moves_by_dice[i] = 0
+	ENDFOR
+
+END
 
 // -- CREATE FUNCTIONS --
 
@@ -164,27 +211,27 @@ FUNCTION create_player_dices()
 	d5->faces[1] = enum_pe
 	d5->faces[2] = enum_h3
 	d5->faces[3] = enum_h3
-	d5->faces[3] = enum_pe
+	d5->faces[4] = enum_pe
 
 	d6->faces[0] = enum_pe
 	d6->faces[1] = enum_h3
 	d6->faces[2] = enum_h3
 	d6->faces[3] = enum_am
-	d6->faces[3] = enum_h3
-	d6->faces[3] = enum_h3
+	d6->faces[4] = enum_h3
+	d6->faces[5] = enum_h3
 
 	d7->faces[0] = enum_pe
 	d7->faces[1] = enum_h3
 	d7->faces[2] = enum_am
 	d7->faces[3] = enum_am
-	d7->faces[3] = enum_h3
+	d7->faces[4] = enum_h3
 
 	d8->faces[0] = enum_pe
 	d8->faces[1] = enum_am
 	d8->faces[2] = enum_h3
 	d8->faces[3] = enum_mn
-	d8->faces[3] = enum_am
-	d8->faces[3] = enum_h3
+	d8->faces[4] = enum_am
+	d8->faces[5] = enum_h3
 
 	// returning dices array ptr
 	RETURN dices
@@ -253,6 +300,39 @@ FUNCTION create_player()
 
 	// returning structure ptr
 	RETURN player
+
+END
+
+/**
+ * `dices_moves_data` constructor
+ */
+FUNCTION create_dices_moves_data()
+
+	// malloc struct
+	dices_moves = MALLOC_STRUCT(dices_moves_data)
+
+	// set default values
+	dices_moves->total_moves_amount = cst_infinite
+	dices_moves->moves_by_dice = MALLOC(cst_nb_dices)
+
+	// file the moves_by_dice array with zeros
+	FOR(i;0;cst_nb_dices)
+		dices_moves->moves_by_dice[i] = 0
+	ENDFOR
+
+	// return struct ptr
+	RETURN dices_moves
+END
+
+// --- DESTROY FUNCTIONS ---
+
+/**
+ * `dices_moves_data` destructor
+ */
+FUNCTION destroy_dices_moves_data(dices_moves)
+
+	FREE(dices_moves->moves_by_dice)
+	FREE(dices_moves)
 
 END
 
@@ -532,26 +612,112 @@ FUNCTION can_be_claimed(objective)
 END
 
 /**
- * Get the amount of moves we must make to reach this objective
+ * Set the `dices_moves_data` ptr with the best amount of moves and the move data to reach the objective in param.
  * @param {objective_data*} objective
- * @return {int}
+ * @param {dice_data**} dices_array
+ * @param {dices_moves*} dices_array
  */
-FUNCTION get_amount_of_moves_needed(objective)
+FUNCTION get_best_dices_moves_for(objective, dices_array, dices_moves)
 
-	// copy objective data
-	nb_fpe = objective->nb_fpe
-	nb_fh3 = objective->nb_fh3
-	nb_fam = objective->nb_fam
-	nb_fmn = objective->nb_fmn
+	// copy objective data into a array of elements
+	nb_felems_needed = MALLOC(cst_nb_elements)
+	nb_felems_needed[enum_pe] = objective->nb_fpe
+	nb_felems_needed[enum_h3] = objective->nb_fh3
+	nb_felems_needed[enum_am] = objective->nb_fam
+	nb_felems_needed[enum_mn] = objective->nb_fmn
 
-	// get player dices
-	player = players[num_exp - 1]
-	player_dices = player->dices
+	// copy dices array
+	dices = copy_array(dices_array, cst_nb_dices)
+	dices_left_amount = cst_nb_dices
 
-	FOR(i;0;cst_nb_dices)
-		dice = player_dices[i]
+	// to prevent infinite loop (if all avaible dices cant reach OR have already reached the current objective)
+	element_completed_amount = 0
 
-	ENDFOR
+	// check if objective is reached
+	is_objective_reached = FALSE
+
+	// While there is still dices lefts and 
+	WHILE(dices_left_amount > 0 AND is_objective_reached == FALSE AND element_completed_amount < cst_nb_elements)
+
+		// reset unreachable_element_amount value
+		unreachable_element_amount = 0
+
+		// go trought all elements
+		FOR(elem;0;cst_nb_elements)
+
+			// Get current of faces needed for the element
+			nb_faces_needed = nb_felems_needed[elem]
+
+			// If there is no faces needed go to next element
+			IF(nb_faces_needed == 0)
+				// Add this to computed element amount (it's used to prenvent infinite loops)
+				element_completed_amount = element_completed_amount + 1
+				CONTINUE
+			ENDIF
+			
+			// initilize best dice research, setting up first dice as the current best choice
+			best_dice_index = -1
+			best_dice_distance = cst_infinite
+			
+			// try to find best dice to use to reach the objective
+			FOR(i;0;cst_nb_dices)
+
+				dice = dices[i]
+
+				// If dice is NULL go to the next one
+				IF(dice == NULL)
+					CONTINUE
+				ENDIF
+				
+				distance = get_dice_distance_from(dices[i], elem)
+
+				// if distance is infinite go to next dice
+				IF(distance == cst_infinite)
+					CONTINUE
+				ENDIF
+
+				// if distance is better than current best distance, set it as best distance
+				IF(IABS(distance) < IABS(best_dice_distance) OR best_dice_distance == cst_infinite)
+					best_dice_distance = distance
+					best_dice_index = i
+				ENDIF
+
+			ENDFOR
+
+			// If there is no best choice, go to next dice
+			IF(best_dice_index == -1)
+				// Add this to computed element amount (it's used to prenvent infinite loops)
+				element_completed_amount = element_completed_amount + 1
+				CONTINUE
+			ENDIF
+
+			// setting the dice has taken
+			dices[best_dice_index] = NULL
+			dices_left_amount = dices_left_amount - 1
+			
+			// Remove 1 from nb faces element needed array of the current element
+			nb_felems_needed[elem] = nb_faces_needed - 1
+
+			// by default total_moves_amount is infinite, if we want to add value we must ensure that it start at 0
+			IF(dices_moves->total_moves_amount == cst_infinite)
+				dices_moves->total_moves_amount = 0
+			ENDIF
+
+			// update result structure dices_moves total_moves_amount & moves_by_dice
+			// - the `total_moves_amount` is stricly positive
+			// - bu the `moves_by_dice` data can be negative if the moves must go negative
+			dices_moves->total_moves_amount = dices_moves->total_moves_amount + IABS(best_dice_distance)
+			dices_moves->moves_by_dice[best_dice_index] = dices_moves->moves_by_dice[best_dice_index] + best_dice_distance
+
+		ENDFOR
+
+		// check if current objective is reached
+		is_objective_reached = (nb_felems_needed[enum_pe] == 0 AND nb_felems_needed[enum_h3] == 0 AND nb_felems_needed[enum_am] == 0 AND nb_felems_needed[enum_mn] == 0)
+
+	ENDWHILE
+
+	FREE(nb_felems_needed)
+	FREE(dices)
 	
 END
 
@@ -600,28 +766,74 @@ FUNCTION get_dice_distance_from(dice, element)
 
 END
 
+FUNCTION get_best_dices_moves(dices)
 
-// --- MOVE FUNCTIONS ---
+	// This ptr stores the best dices moves of all objective
+	best_dices_moves = create_dices_moves_data()
 
-FUNCTION move_only_player_dices()
+	// This ptr stores the result of the current objective
+	dices_moves_temp = create_dices_moves_data()
 
-	PRINTERR("NOO")
+	FOR(i;0;cst_nb_objectives)
 
+		IF(objectives[i]->is_claimed == TRUE)
+			CONTINUE
+		ENDIF
+
+		// reset temp data
+		reset_dices_moves_data(dices_moves_temp)
+		
+		// Get the best_dices_moves for the current objective
+		get_best_dices_moves_for(objectives[i], dices, dices_moves_temp)
+
+		best_total = best_dices_moves->total_moves_amount 
+		total = dices_moves_temp->total_moves_amount
+
+		// if current total is infinite go to next one
+		IF(total == cst_infinite)
+			CONTINUE
+		ENDIF
+
+		// if current total is better that current best one, replace the best by the current
+		// To do so i copy the data from the temp and set it to the best one
+		// - this way if i free temp, they would have no impact in the best one
+		IF (total < best_total OR best_total == cst_infinite)
+			copy_dices_moves_data(dices_moves_temp, best_dices_moves)
+		ENDIF
+
+	ENDFOR
+
+	// free temp structure
+	destroy_dices_moves_data(dices_moves_temp)
+
+	// returning best dices moves ptr
+	RETURN best_dices_moves
 END
-
 
 // --- MAKE FUNCTIONS ---
 
-FUNCTION make_moves()
+FUNCTION make_moves(dices_moves)
 
 	PRINT("MOVE 0")
 	PRINT("MOVE 0")
 	PRINT("MOVE 0")
 	PRINT("MOVE 0")
-	PRINT("MOVE 0")
-	PRINT("MOVE 0")
-	PRINT("MOVE 0")
-	PRINT("MOVE 0")
+	
+	moves_by_dice = dices_moves->moves_by_dice
+
+	FOR(i;0;cst_nb_dices)
+
+		move_value = moves_by_dice[i]
+		
+		IF(move_value > 0)
+			PRINT("MOVE 1")
+		ELIF(move_value == 0)
+			PRINT("MOVE 0")
+		ELSE
+			PRINT("MOVE -1")
+		ENDIF
+
+	ENDFOR
 
 END
 
@@ -674,9 +886,17 @@ END
 
 FUNCTION play_turn()
 
-	make_moves()
+	player = players[num_exp - 1]
+
+	best_dices_moves = get_best_dices_moves(player->dices)
+
+	make_moves(best_dices_moves)
+
 	update_dices()
+
 	make_claims()
+
+	destroy_dices_moves_data(best_dices_moves)
 
 END
 
