@@ -7,19 +7,26 @@
 
 GLOBALS
 
-	enum_pe = 0
-	enum_h3 = 1
-	enum_am = 2
-	enum_mn = 3
+	// Enum values for elements
 
-	cst_nb_objectives = 9
-	cst_nb_dices = 4
+	enum_pe = 0 // PE element
+	enum_h3 = 1 // H3 element
+	enum_am = 2 // AM element
+	enum_mn = 3 // MN element
 
-	nb_exp = NULL
-	num_exp = NULL
-	players = NULL
-	objectives = NULL
-	shared_dices = NULL
+	// constants
+
+	cst_nb_objectives = 9 // {int} amount of objectives in the game
+	cst_nb_dices = 4      // {int} amount of dices of shared_dices and also each player dices
+	cst_nb_moves = 8      // {int} amount of moves allowed each turn
+
+	// globas vars, setted up at game initialization (init FUNCTION)
+
+	nb_exp = NULL       // {int}              number of player (explorers) in the game
+	num_exp = NULL      // {int}              explorer ID that we are playing
+	players = NULL      // {player_data**}    array of all the players in the game
+	objectives = NULL   // {objective_data**} array of all the objectives in the game
+	shared_dices = NULL // {dice_data**}      array of all the shared dices
 
 ENDGLOBALS
 
@@ -30,31 +37,43 @@ ENDGLOBALS
 ----------------------------------
 */
 
+/**
+ * Represent a player in the game
+ * IMPORTANT: use the `create_player` function to create a new player data structure ptr
+ */
 STRUCT player_data
 
-	pid
-	is_dead
-	score
-	dices
+	pid     // {int}         player unique ID given at the start of the game (default value is -1, wich mean the value has not been set)
+	is_dead // {bool}        player death status (TRUE: player is dead | FALSE: player alive, FALSE by default)
+	score   // {int}         player current score (0 by default)
+	dices   // {dice_data**} list of player's dices, the size of the array is 4 (cst_nb_dices), the value is a NULL ptr by default.
 
 ENDSTRUCT
 
+/**
+ * Represent a objective in the game
+ * IMPORTANT: use the `create_objective` function to create a new objective data structure ptr
+ */
 STRUCT objective_data
 
-	oid
-	nb_fpe
-	nb_fh3
-	nb_fam
-	nb_fmn
-	is_claimed
+	oid        // {int}  objective unique ID given at the start of the game (default value is -1, wich mean it has not been set)
+	nb_fpe     // {int}  number of PE elments needed to complete the objective (0 by default)
+	nb_fh3     // {int}  number of H3 elments needed to complete the objective (0 by default)
+	nb_fam     // {int}  number of AM elments needed to complete the objective (0 by default)
+	nb_fmn     // {int}  number of MN elments needed to complete the objective (0 by default)
+	is_claimed // {bool} objective claimedd status (TRUE: objective has been already claimed | FALSE: objective not claimed yet)
 
 ENDSTRUCT
 
+/**
+ * Represent a dice in the game
+ * IMPORTANT: use the `create_dice` function to create a new dice data structure ptr
+ */
 STRUCT dice_data
 
-	index
-	faces
-	length
+	index  // {int}  current dice's face active, 0 by default
+	faces  // {int*} array of integer representing the faces, each value is one of the enum elements (enum_pe | enum_h3 | enum_am | enum_mn), NULL ptr by default
+	length // {int}  number of faces the dice have (size of the `faces` array), 0 by default
 
 ENDSTRUCT
 
@@ -67,11 +86,15 @@ ENDSTRUCT
 
 // -- CREATE FUNCTIONS --
 
-
+/**
+ * `objective_data` constructor
+ */
 FUNCTION create_objective()
 
+	// malloc structure
 	objective = MALLOC_STRUCT(objective_data)
 
+	// setting up default values
 	objective->oid = -1
 	objective->nb_fpe = 0
 	objective->nb_fh3 = 0
@@ -79,35 +102,50 @@ FUNCTION create_objective()
 	objective->nb_fmn = 0
 	objective->is_claimed = FALSE
 
+	// returning structure ptr
 	RETURN objective
 	
 END
 
+/**
+ * `dice_data` constructor
+ */
 FUNCTION create_dice()
 
+	// malloc structure
 	dice = MALLOC_STRUCT(dice_data)
 
+	// default data values
 	dice->index = 0
 	dice->length = 0
 	dice->faces = NULL
 
+	// returning structure ptr
 	RETURN dice 
 
 END
 
+/**
+ * Create a `dice_data*` array,
+ * and fills the dices faces with the values values of **players dices**.
+ */
 FUNCTION create_player_dices()
 
+	// malloc a new `dice_data*` array
 	dices = MALLOC(cst_nb_dices)
 
+	// fills the array with new dice_data
 	FOR(i;0;cst_nb_dices)
 		dices[i] = create_dice()
 	ENDFOR
 
+	// getting dices ptr
 	d5 = dices[0]
 	d6 = dices[1]
 	d7 = dices[2]
 	d8 = dices[3]
 
+	// setting up there length
 	d5->length = 5
 	d6->length = 6
 	d7->length = 5
@@ -118,6 +156,7 @@ FUNCTION create_player_dices()
 		dices[i]->faces = MALLOC(dices[i]->length)
 	ENDFOR
 
+	// fillings up dices faces with there default values
 	d5->faces[0] = enum_pe
 	d5->faces[1] = enum_pe
 	d5->faces[2] = enum_h3
@@ -144,13 +183,20 @@ FUNCTION create_player_dices()
 	d8->faces[3] = enum_am
 	d8->faces[3] = enum_h3
 
+	// returning dices array ptr
 	RETURN dices
 END
 
+/**
+ * Create a `dice_data*` array,
+ * and fills the dices faces with the values values of **shared dices**.
+ */
 FUNCTION create_shared_dices()
 
-	// init dices array
+	// malloc of the `dice_data*` array
 	dices = MALLOC(cst_nb_dices)
+
+	// filling up array with new dices and setting up there length & faces
 	FOR(i;0;cst_nb_dices)
 		dices[i] = create_dice()
 		dices[i]->length = 4
@@ -164,7 +210,6 @@ FUNCTION create_shared_dices()
 	d4 = dices[3]
 
 	// filling up dices faces data
-
 	d1->faces[0] = enum_pe
 	d1->faces[1] = enum_am
 	d1->faces[2] = enum_mn
@@ -185,87 +230,125 @@ FUNCTION create_shared_dices()
 	d4->faces[2] = enum_am
 	d4->faces[3] = enum_mn
 
+	// retruning dices array ptr
 	RETURN dices
 END
 
+/**
+ * `player_data` constructor
+ */
 FUNCTION create_player()
 
+	// malloc struct
 	player = MALLOC_STRUCT(player_data)
 
+	// setting up default values
 	player->pid = -1
 	player->is_dead = FALSE
 	player->score = 0
 	player->dices = create_player_dices()
 
+	// returning structure ptr
 	RETURN player
 
 END
 
 // --- INIT FUNCTIONS ---
 
+/**
+ * initilize the `players` global variable array,
+ * by filling it up with `player_data*` structures
+ */
 FUNCTION init_players()
-
+	
+	// malloc the `player_data*` array by the number of current players
 	players = MALLOC(nb_exp)
+
+	// create new players for each ptr in the array
 	FOR(i;0;nb_exp)
 		players[i] = create_player()
 	ENDFOR
 
 END
 
+/**
+ * initilize the `objectives` global variable array,
+ * by filling it up with `objective_data*` structures
+ */
 FUNCTION init_objectives()
 
+	// malloc of the `objective_data*` array
 	objectives = MALLOC(cst_nb_objectives)
+
+	// create a new objective for each ptr
 	FOR(i;0;cst_nb_objectives)
 		objectives[i] = create_objective()
 	ENDFOR
 
 END
 
+/**
+ * GLOBAL GAME INITIALIZATION,
+ * this function is called at the start of each game to read input and setting up the game
+ */
 FUNCTION init()
 
+	// Read inputs or number of players & wich player we are
 	nb_exp = READ()
 	num_exp = READ()
 	
+	// initialization of players and objectives
 	init_players()
 	init_objectives()
 
+	// create shared_dices data
 	shared_dices = create_shared_dices()
 END
 
 
 // --- UPDATE FUNCTIONS ---
 
+/**
+ * Each **turn** we update the players data,
+ * we read the values given by the game to update our `players` array
+ */
 FUNCTION update_players()
-
-	PRINTERR("\n PLAYERS: \n\n")
 
 	// Update players array
 	FOR(i;0;nb_exp)
 
+		// read given datas
 		e = READ()
 		p = READ()
 		s = READ()
 
+		// compute player index in the array & get player
 		p_index = e - 1
-
 		player = players[p_index]
+
+		// update player datas
 		player->pid = e
 		player->is_dead = p
 		player->score = s
-
-		PRINTERR("i = ", INT, i, " > E: ", INT, e, " P: ", BOOL, p, " S: ", INT, s, "\n")
 		
 	ENDFOR
 
 END
 
+/**
+ * Each **round** we update the objectives data,
+ * we read the values given by the game to update our `objectives` array
+ *
+ * This update is not meant to update the current objectives data,
+ * but to reset the array by overwritting the current data with the new objectives given
+ */
 FUNCTION update_objectives()
 
-	PRINTERR("\n OBJECTIVES: \n\n")
 
 	// Update objectives array
 	FOR(i;0;cst_nb_objectives)
 
+		// read given datas
 		oid = READ()
 		fpe = READ()
 		fh3 = READ()
@@ -274,22 +357,27 @@ FUNCTION update_objectives()
 
 		objective = objectives[i]
 
+		// set new data
 		objective->oid = oid
 		objective->nb_fpe = fpe
 		objective->nb_fh3 = fh3
 		objective->nb_fam = fam
 		objective->nb_fmn = fmn
 		objective->is_claimed = FALSE
-
-		PRINTERR("i = ", INT, i, " > OID: ", INT, oid, "\n")
 		
 	ENDFOR
 END
 
+/**
+ * Each **turn** we update the shared dices array but all each player dices array,
+ * To do so we read each data (moves made by the players) to update ours dices.
+ */
 FUNCTION update_dices()
 
+	// for each player in game we read his moves
 	FOR(i;0;nb_exp)
 
+		// read given datas
 		e = READ()
 		m1 = READ()
 		m2 = READ()
@@ -300,11 +388,13 @@ FUNCTION update_dices()
 		m7 = READ()
 		m8 = READ()
 
+		// update shared_dices
 		shared_dices[0]->index = (shared_dices[0]->index + m1 + shared_dices[0]->length) % shared_dices[0]->length
 		shared_dices[1]->index = (shared_dices[1]->index + m2 + shared_dices[1]->length) % shared_dices[1]->length
 		shared_dices[2]->index = (shared_dices[2]->index + m3 + shared_dices[2]->length) % shared_dices[2]->length
 		shared_dices[3]->index = (shared_dices[3]->index + m4 + shared_dices[3]->length) % shared_dices[3]->length
 
+		// update current player dices
 		player = players[e - 1]
 		player->dices[0]->index = (player->dices[0]->index + m5 + player->dices[0]->length) % player->dices[0]->length
 		player->dices[1]->index = (player->dices[1]->index + m6 + player->dices[1]->length) % player->dices[1]->length
@@ -315,27 +405,39 @@ FUNCTION update_dices()
 
 END
 
+/**
+ * Update the score of all the players
+ * We read the data of all the players claim's, and if they are valid we update the score
+ */
 FUNCTION update_scores()
 	
+	// for each player in game
 	FOR(i;0;nb_exp)
 
+		// read given datas
 		e = READ()
 		oid = READ()
 
+		// get player data of the current player
 		player = players[e - 1]
 
+		// find the targeted objective, and if so check if claimed and if not update objective
 		FOR (j;0;cst_nb_objectives)
 
 			objective = objectives[j]
 
+			// if not targeted objective, go to the next one
 			IF(objective->oid != oid)
 				CONTINUE
 			ENDIF
 
+			// if objective is not claimed
 			IF(objective->is_claimed == FALSE)
 
+				// set objective to claimed
 				objective->is_claimed = TRUE
 
+				// update score depending of objective difficulty
 				IF(oid < 11)
 					player->score = player->score + 100
 				ELIF(oid < 21)
@@ -346,7 +448,8 @@ FUNCTION update_scores()
 				ENDIF
 
 			ENDIF
-
+			
+			// go to next player
 			BREAK
 
 		ENDFOR
@@ -357,6 +460,11 @@ END
 
 // -- OBJECTIVES FUNCTIONS
 
+/**
+ * Check if an objective can be claimed by **US** (they explorer we are controlling)
+ * @param {objective_data*} objective
+ * @return {bool}
+ */
 FUNCTION can_be_claimed(objective)
 
 	// setting up elements counters
@@ -417,6 +525,15 @@ FUNCTION can_be_claimed(objective)
 
 	// return the result
 	RETURN (nb_fpe >= objective->nb_fpe AND nb_fh3 >= objective->nb_fh3 AND nb_fam >= objective->nb_fam AND nb_fmn >= objective->nb_fmn)
+
+END
+
+
+// --- MOVE FUNCTIONS ---
+
+FUNCTION move_only_player_dices()
+
+	PRINTERR("NOO")
 
 END
 
