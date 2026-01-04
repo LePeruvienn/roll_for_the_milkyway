@@ -7,10 +7,10 @@
 
 GLOBALS
 
-	cst_pe = 0
-	cst_h3 = 1
-	cst_am = 2
-	cst_mn = 3
+	enum_pe = 0
+	enum_h3 = 1
+	enum_am = 2
+	enum_mn = 3
 
 	cst_nb_objectives = 9
 	cst_nb_dices = 4
@@ -118,31 +118,31 @@ FUNCTION create_player_dices()
 		dices[i]->faces = MALLOC(dices[i]->length)
 	ENDFOR
 
-	d5->faces[0] = cst_pe
-	d5->faces[1] = cst_pe
-	d5->faces[2] = cst_h3
-	d5->faces[3] = cst_h3
-	d5->faces[3] = cst_pe
+	d5->faces[0] = enum_pe
+	d5->faces[1] = enum_pe
+	d5->faces[2] = enum_h3
+	d5->faces[3] = enum_h3
+	d5->faces[3] = enum_pe
 
-	d6->faces[0] = cst_pe
-	d6->faces[1] = cst_h3
-	d6->faces[2] = cst_h3
-	d6->faces[3] = cst_am
-	d6->faces[3] = cst_h3
-	d6->faces[3] = cst_h3
+	d6->faces[0] = enum_pe
+	d6->faces[1] = enum_h3
+	d6->faces[2] = enum_h3
+	d6->faces[3] = enum_am
+	d6->faces[3] = enum_h3
+	d6->faces[3] = enum_h3
 
-	d7->faces[0] = cst_pe
-	d7->faces[1] = cst_h3
-	d7->faces[2] = cst_am
-	d7->faces[3] = cst_am
-	d7->faces[3] = cst_h3
+	d7->faces[0] = enum_pe
+	d7->faces[1] = enum_h3
+	d7->faces[2] = enum_am
+	d7->faces[3] = enum_am
+	d7->faces[3] = enum_h3
 
-	d8->faces[0] = cst_pe
-	d8->faces[1] = cst_am
-	d8->faces[2] = cst_h3
-	d8->faces[3] = cst_mn
-	d8->faces[3] = cst_am
-	d8->faces[3] = cst_h3
+	d8->faces[0] = enum_pe
+	d8->faces[1] = enum_am
+	d8->faces[2] = enum_h3
+	d8->faces[3] = enum_mn
+	d8->faces[3] = enum_am
+	d8->faces[3] = enum_h3
 
 	RETURN dices
 END
@@ -165,25 +165,25 @@ FUNCTION create_shared_dices()
 
 	// filling up dices faces data
 
-	d1->faces[0] = cst_pe
-	d1->faces[1] = cst_am
-	d1->faces[2] = cst_mn
-	d1->faces[3] = cst_am
+	d1->faces[0] = enum_pe
+	d1->faces[1] = enum_am
+	d1->faces[2] = enum_mn
+	d1->faces[3] = enum_am
 
-	d2->faces[0] = cst_pe
-	d2->faces[1] = cst_h3
-	d2->faces[2] = cst_mn
-	d2->faces[3] = cst_h3
+	d2->faces[0] = enum_pe
+	d2->faces[1] = enum_h3
+	d2->faces[2] = enum_mn
+	d2->faces[3] = enum_h3
 
-	d3->faces[0] = cst_pe
-	d3->faces[1] = cst_h3
-	d3->faces[2] = cst_mn
-	d3->faces[3] = cst_am
+	d3->faces[0] = enum_pe
+	d3->faces[1] = enum_h3
+	d3->faces[2] = enum_mn
+	d3->faces[3] = enum_am
 
-	d4->faces[0] = cst_h3
-	d4->faces[1] = cst_mn
-	d4->faces[2] = cst_am
-	d4->faces[3] = cst_mn
+	d4->faces[0] = enum_h3
+	d4->faces[1] = enum_mn
+	d4->faces[2] = enum_am
+	d4->faces[3] = enum_mn
 
 	RETURN dices
 END
@@ -327,28 +327,27 @@ FUNCTION update_scores()
 		FOR (j;0;cst_nb_objectives)
 
 			objective = objectives[j]
-			
-			// TODO: DO IF GUARGS !! WITH BREAKS & CONTINUE !!!
-			IF(objective->oid == oid)
 
-				IF(objective->is_claimed == FALSE)
+			IF(objective->oid != oid)
+				CONTINUE
+			ENDIF
 
-					objective->is_claimed = TRUE
+			IF(objective->is_claimed == FALSE)
 
-					IF(oid < 11)
-						player->score = player->score + 100
-					ELIF(oid < 21)
-						player->score = player->score + 150
-					ELSE
-						player->score = player->score + 200
+				objective->is_claimed = TRUE
 
-					ENDIF
+				IF(oid < 11)
+					player->score = player->score + 100
+				ELIF(oid < 21)
+					player->score = player->score + 150
+				ELSE
+					player->score = player->score + 200
 
 				ENDIF
 
-				BREAK
-
 			ENDIF
+
+			BREAK
 
 		ENDFOR
 	
@@ -374,25 +373,25 @@ FUNCTION can_be_claimed(objective)
 		index = dice->index
 		faces = dice->faces
 		
-		IF(faces[index] == cst_pe)
+		IF(faces[index] == enum_pe)
 			nb_fpe = nb_fpe + 1
 
-		ELIF(faces[index] == cst_h3)
+		ELIF(faces[index] == enum_h3)
 			nb_fh3 = nb_fh3 + 1
 
-		ELIF(faces[index] == cst_am)
+		ELIF(faces[index] == enum_am)
 			nb_fam = nb_fam + 1
 
-		ELIF(faces[index] == cst_mn)
+		ELIF(faces[index] == enum_mn)
 			nb_fmn = nb_fmn + 1
 
 		ENDIF
 
-	END
+	ENDFOR
 		
 	// count the number of elements is player dices
 	player = players[num_exp - 1]
-	player_dices = player->dice;
+	player_dices = player->dices
 
 	FOR(i;0;cst_nb_dices)
 	
@@ -400,21 +399,21 @@ FUNCTION can_be_claimed(objective)
 		index = dice->index
 		faces = dice->faces
 		
-		IF(faces[index] == cst_pe)
+		IF(faces[index] == enum_pe)
 			nb_fpe = nb_fpe + 1
 
-		ELIF(faces[index] == cst_h3)
+		ELIF(faces[index] == enum_h3)
 			nb_fh3 = nb_fh3 + 1
 
-		ELIF(faces[index] == cst_am)
+		ELIF(faces[index] == enum_am)
 			nb_fam = nb_fam + 1
 
-		ELIF(faces[index] == cst_mn)
+		ELIF(faces[index] == enum_mn)
 			nb_fmn = nb_fmn + 1
 
 		ENDIF
 
-	END
+	ENDFOR
 
 	// return the result
 	RETURN (nb_fpe >= objective->nb_fpe AND nb_fh3 >= objective->nb_fh3 AND nb_fam >= objective->nb_fam AND nb_fmn >= objective->nb_fmn)
