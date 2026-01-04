@@ -103,6 +103,84 @@ ENDSTRUCT
 
 // -- UTILS FUNCTIONS --
 
+FUNCTION print_dices_moves_data(data)
+
+	IF(data == NULL)
+		PRINTERR("DICES_MOVES_DATA = NULL\n")
+	ELSE
+		PRINTERR("DICES_MOVES_DATA {\n")
+		
+		// Affichage de l'objectif ciblé
+		IF(data->targeted_objective == NULL)
+			PRINTERR("  targeted_objective: NULL,\n")
+		ELSE
+			PRINTERR("  target_oid: ", INT, data->targeted_objective->oid, ",\n")
+		ENDIF
+
+		// Affichage du total de mouvements (gestion de l'infini)
+		IF(data->total_moves_amount == cst_infinite)
+			PRINTERR("  total_moves: INFINITE,\n")
+		ELSE
+			PRINTERR("  total_moves: ", INT, data->total_moves_amount, ",\n")
+		ENDIF
+
+		// Affichage du détail par dé
+		PRINTERR("  moves_by_dice: [")
+		FOR(i; 0; cst_nb_dices)
+			PRINTERR(INT, data->moves_by_dice[i])
+			IF(i < cst_nb_dices - 1)
+				PRINTERR(", ")
+			ENDIF
+		ENDFOR
+		PRINTERR("]\n")
+		
+		PRINTERR("}\n")
+	ENDIF
+
+END
+
+FUNCTION print_objective(objective)
+
+	IF(objective == NULL)
+		PRINTERR("OBJECTIVE = NULL\n")
+	ELSE
+		PRINTERR("OBJECTIVE {\n")
+		PRINTERR("oid: ", INT, objective->oid, ",\n")
+		PRINTERR("nb_fpe: ", INT, objective->nb_fpe, ",\n")
+		PRINTERR("nb_fh3: ", INT, objective->nb_fh3, ",\n")
+		PRINTERR("nb_fam: ", INT, objective->nb_fam, ",\n")
+		PRINTERR("nb_fmn: ", INT, objective->nb_fmn, ",\n")
+		PRINTERR("is_claimed: ", INT, objective->is_claimed, ",\n")
+		PRINTERR("}\n")
+	ENDIF
+END
+
+FUNCTION print_dice(dice)
+
+	IF(dice == NULL)
+		PRINTERR("DICE = NULL\n")
+	ELSE
+		PRINTERR("DICE index=", INT, dice->index, " faces=[")
+		FOR(i;0;dice->length)
+			PRINTERR(INT, dice->faces[i])
+			IF(i < dice->length - 1)
+				PRINTERR(",")
+			ENDIF
+		ENDFOR
+		PRINTERR("]\n")
+	ENDIF
+
+END
+
+FUNCTION print_dices(dices)
+
+	FOR(i;0;cst_nb_dices)
+		print_dice(dices[i])
+	ENDFOR
+
+END
+
+
 FUNCTION copy_array(array, size)
 
 	new_array = MALLOC(size)
@@ -117,6 +195,7 @@ END
 
 FUNCTION copy_dices_moves_data(source, dest)
 
+	dest->targeted_objective = source->targeted_objective
 	dest->total_moves_amount = source->total_moves_amount
 	
 	FOR(i;0;cst_nb_dices)
@@ -134,6 +213,15 @@ FUNCTION copy_objective_data(source, dest)
 	dest->nb_fmn = source->nb_fmn
 	dest->is_claimed = source->is_claimed
 
+END
+
+FUNCTION create_objective_copy(source)
+
+	objective = create_objective()
+	copy_objective_data(source, objective)
+
+	RETURN objective
+	
 END
 
 FUNCTION reset_dices_moves_data(data)
@@ -602,11 +690,10 @@ FUNCTION can_be_claimed(objective)
 		
 	// count the number of elements is player dices
 	player = players[num_exp - 1]
-	player_dices = player->dices
 
 	FOR(i;0;cst_nb_dices)
 	
-		dice = player_dices[i]
+		dice = player->dices[i]
 		index = dice->index
 		faces = dice->faces
 		
@@ -638,6 +725,10 @@ END
  * @param {dices_moves*} dices_array
  */
 FUNCTION get_best_dices_moves_for(objective, dices_array, dices_moves)
+
+	IF(dices_array == shared_dices)
+		print_objective(objective)
+	ENDIF
 
 	// set targeted_objective to objective
 	dices_moves->targeted_objective = objective
@@ -708,7 +799,7 @@ FUNCTION get_best_dices_moves_for(objective, dices_array, dices_moves)
 			ENDFOR
 
 			// If there is no best choice, go to next dice
-			IF(best_dice_index == -1)
+			IF(best_dice_index == -1 OR best_dice_distance == cst_infinite)
 				// Add this to computed element amount (it's used to prenvent infinite loops)
 				element_completed_amount = element_completed_amount + 1
 				CONTINUE
@@ -763,7 +854,7 @@ FUNCTION get_dice_distance_from(dice, element)
 	FOR(i;0;dice->length)
 
 		// compute index
-		index = (dice->index + i) % dice->length
+		index = (dice->index + i + dice->length) % dice->length
 
 		// if it's not the element we are looking for, go next
 		IF(dice->faces[index] != element)
@@ -817,12 +908,23 @@ FUNCTION get_best_dices_moves(dices)
 			CONTINUE
 		ENDIF
 
-		// if current total is better that current best one, replace the best by the current
+		// if current total is more than best total, go to next one
+		IF(total > best_total AND best_total != cst_infinite)
+			CONTINUE
+		ENDIF
+
+		best_objective = best_dices_moves->targeted_objective
+		objective = dices_moves_temp->targeted_objective
+
+		// if total and best_total are equal but best_total has a bigger oid, we keep best_total, go to the next one
+		IF (total == best_total AND best_objective->oid > objective->oid AND best_total != cst_infinite)
+			CONTINUE
+		ENDIF
+
+		// If we pass all the test we keep the currenet dices moves
 		// To do so i copy the data from the temp and set it to the best one
 		// - this way if i free temp, they would have no impact in the best one
-		IF (total < best_total OR best_total == cst_infinite)
-			copy_dices_moves_data(dices_moves_temp, best_dices_moves)
-		ENDIF
+		copy_dices_moves_data(dices_moves_temp, best_dices_moves)
 
 	ENDFOR
 
@@ -831,6 +933,33 @@ FUNCTION get_best_dices_moves(dices)
 
 	// returning best dices moves ptr
 	RETURN best_dices_moves
+END
+
+FUNCTION apply_moves_on(targeted_objective, moves_by_dice, dices)
+
+	FOR(i;0;cst_nb_dices)
+
+		dice = dices[i]
+		index = dice->index
+		faces = dice->faces
+		length = dice->length
+		move = moves_by_dice[i]
+
+		new_index = (index + move + length) % length
+		elem = faces[new_index]
+
+		IF(elem == enum_pe AND targeted_objective->nb_fpe > 0)
+			targeted_objective->nb_fpe = targeted_objective->nb_fpe - 1
+		ELIF(elem == enum_h3 AND targeted_objective->nb_fh3 > 0)
+			targeted_objective->nb_fh3 = targeted_objective->nb_fh3 - 1
+		ELIF(elem == enum_am AND targeted_objective->nb_fam > 0)
+			targeted_objective->nb_fam = targeted_objective->nb_fam - 1
+		ELIF(elem == enum_mn AND targeted_objective->nb_fmn > 0)
+			targeted_objective->nb_fmn = targeted_objective->nb_fmn - 1
+		ENDIF
+
+	ENDFOR
+	
 END
 
 // --- MAKE FUNCTIONS ---
@@ -927,16 +1056,18 @@ FUNCTION play_turn()
 	// get player ptr
 	player = players[num_exp - 1]
 
-	// compute best moves
 	best_player_dices_moves = get_best_dices_moves(player->dices)
-	best_shared_dices_moves = get_best_dices_moves(shared_dices)
 
-	/* TODO
 	targeted_objective = best_player_dices_moves->targeted_objective
+	targeted_objective_copy = create_objective_copy(targeted_objective)
 
 	best_shared_dices_moves = create_dices_moves_data()
-	get_best_dices_moves_for(targeted_objective, shared_dices, best_shared_dices_moves)
-	*/
+
+	apply_moves_on(targeted_objective_copy, best_player_dices_moves->moves_by_dice, player->dices)
+
+	get_best_dices_moves_for(targeted_objective_copy, shared_dices, best_shared_dices_moves)
+
+	print_dices_moves_data(best_shared_dices_moves)
 
 	// make moves that we computed before
 	make_moves(best_shared_dices_moves, best_player_dices_moves)
@@ -950,6 +1081,7 @@ FUNCTION play_turn()
 	// free used data
 	destroy_dices_moves_data(best_player_dices_moves)
 	destroy_dices_moves_data(best_shared_dices_moves)
+	FREE(targeted_objective_copy)
 
 END
 
