@@ -87,9 +87,10 @@ ENDSTRUCT
  */
 STRUCT dices_moves_data
 
-	total_moves_amount // {int}  the total number of moves to reach the objective (or to be the closest to), default cst_infinite
-	moves_by_dice      // {int*} the moves by dice to do (the index is the dice index so, and the value is the moves to apply on the dices),
-	                   //        default array of int* of size cst_nb_dices filled with zeros
+	targeted_objective // {objective_data*} the targeted objective when performing these moves, by default NULL
+	total_moves_amount // {int}             the total number of moves to reach the objective (or to be the closest to), default cst_infinite
+	moves_by_dice      // {int*}            the moves by dice to do (the index is the dice index so, and the value is the moves to apply on the dices),
+	                   //                   default array of int* of size cst_nb_dices filled with zeros
 
 ENDSTRUCT
 
@@ -124,8 +125,20 @@ FUNCTION copy_dices_moves_data(source, dest)
 
 END
 
+FUNCTION copy_objective_data(source, dest)
+
+	dest->oid = source->oid
+	dest->nb_fpe = source->nb_fpe
+	dest->nb_fh3 = source->nb_fh3
+	dest->nb_fam = source->nb_fam
+	dest->nb_fmn = source->nb_fmn
+	dest->is_claimed = source->is_claimed
+
+END
+
 FUNCTION reset_dices_moves_data(data)
 	
+	data->targeted_objective = NULL
 	data->total_moves_amount = cst_infinite
 
 	FOR(i;0;cst_nb_dices)
@@ -133,6 +146,12 @@ FUNCTION reset_dices_moves_data(data)
 	ENDFOR
 
 END
+
+/** TODO
+FUNCTION simulate_moves_on(objective, dices, moves_by_dice)
+
+END
+*/
 
 // -- CREATE FUNCTIONS --
 
@@ -312,6 +331,7 @@ FUNCTION create_dices_moves_data()
 	dices_moves = MALLOC_STRUCT(dices_moves_data)
 
 	// set default values
+	dices_moves->targeted_objective = NULL
 	dices_moves->total_moves_amount = cst_infinite
 	dices_moves->moves_by_dice = MALLOC(cst_nb_dices)
 
@@ -619,6 +639,9 @@ END
  */
 FUNCTION get_best_dices_moves_for(objective, dices_array, dices_moves)
 
+	// set targeted_objective to objective
+	dices_moves->targeted_objective = objective
+
 	// copy objective data into a array of elements
 	nb_felems_needed = MALLOC(cst_nb_elements)
 	nb_felems_needed[enum_pe] = objective->nb_fpe
@@ -639,8 +662,8 @@ FUNCTION get_best_dices_moves_for(objective, dices_array, dices_moves)
 	// While there is still dices lefts and 
 	WHILE(dices_left_amount > 0 AND is_objective_reached == FALSE AND element_completed_amount < cst_nb_elements)
 
-		// reset unreachable_element_amount value
-		unreachable_element_amount = 0
+		// reset element_completed_amount value
+		element_completed_amount = 0
 
 		// go trought all elements
 		FOR(elem;0;cst_nb_elements)
@@ -812,14 +835,29 @@ END
 
 // --- MAKE FUNCTIONS ---
 
-FUNCTION make_moves(dices_moves)
+FUNCTION make_moves(best_shared_dices_moves, best_player_dices_moves)
 
-	PRINT("MOVE 0")
-	PRINT("MOVE 0")
-	PRINT("MOVE 0")
-	PRINT("MOVE 0")
+	moves_by_dice = best_shared_dices_moves->moves_by_dice
+
+	made_move = FALSE
+
+	FOR(i;0;cst_nb_dices)
+
+		move_value = moves_by_dice[i]
+		
+		IF(move_value == 0 OR made_move == TRUE)
+			PRINT("MOVE 0")
+		ELIF(move_value > 0)
+			PRINT("MOVE 1")
+			made_move = TRUE
+		ELSE
+			PRINT("MOVE -1")
+			made_move = TRUE
+		ENDIF
+
+	ENDFOR
 	
-	moves_by_dice = dices_moves->moves_by_dice
+	moves_by_dice = best_player_dices_moves->moves_by_dice
 
 	FOR(i;0;cst_nb_dices)
 
@@ -886,17 +924,32 @@ END
 
 FUNCTION play_turn()
 
+	// get player ptr
 	player = players[num_exp - 1]
 
-	best_dices_moves = get_best_dices_moves(player->dices)
+	// compute best moves
+	best_player_dices_moves = get_best_dices_moves(player->dices)
+	best_shared_dices_moves = get_best_dices_moves(shared_dices)
 
-	make_moves(best_dices_moves)
+	/* TODO
+	targeted_objective = best_player_dices_moves->targeted_objective
 
+	best_shared_dices_moves = create_dices_moves_data()
+	get_best_dices_moves_for(targeted_objective, shared_dices, best_shared_dices_moves)
+	*/
+
+	// make moves that we computed before
+	make_moves(best_shared_dices_moves, best_player_dices_moves)
+
+	// update dice data
 	update_dices()
 
+	// make claims if possible
 	make_claims()
 
-	destroy_dices_moves_data(best_dices_moves)
+	// free used data
+	destroy_dices_moves_data(best_player_dices_moves)
+	destroy_dices_moves_data(best_shared_dices_moves)
 
 END
 
