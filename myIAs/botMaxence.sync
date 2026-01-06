@@ -1064,6 +1064,7 @@ FUNCTION play_turn()
 		targeted_objective_copy = create_objective_copy(targeted_objective)
 		apply_moves_on(targeted_objective_copy, best_player_dices_moves->moves_by_dice, player->dices)
 		get_best_dices_moves_for(targeted_objective_copy, shared_dices, best_shared_dices_moves)
+		FREE(targeted_objective_copy)
 
 	ENDIF
 
@@ -1079,7 +1080,6 @@ FUNCTION play_turn()
 	// free used data
 	destroy_dices_moves_data(best_player_dices_moves)
 	destroy_dices_moves_data(best_shared_dices_moves)
-	FREE(targeted_objective_copy)
 
 END
 
