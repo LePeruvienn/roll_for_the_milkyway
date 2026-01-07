@@ -1,3 +1,59 @@
+/**
+ * @author       : Arthur PINEL - ENSIIE FISA 1A
+ * @repository   : https://github.com/LePeruvienn/roll_for_the_milkyway
+ * 
+ * J'ai fait un petit programme afin d'ajouter une syntax de coleur pour les éditeur vim et vscode.
+ * Hésitez pas à jeter un coup d'oeuil, ça pourrais être utile pour les prochains étudiant !
+ * (à utiliser comme bon vous semble : télécharger, copier, modifier, distribuer, ... CC0)
+ * 
+ * @color-syntax : https://github.com/LePeruvienn/roll_for_the_milkyway/tree/main/color-syntax
+ */
+
+/**
+ * @presentation : 
+ *
+ * IA « BotMaxence » pour Roll For The Milkyway
+ *
+ * Cette IA a pour objectif de maximiser le score de manière stratégique.
+ *
+ * Approche principale :
+ * 
+ *   Mon avis est est que les dés partager sont beaucoup trop instable et aléatoire comme ils sont manipuler par tout les joueurs.
+     -> J'ai donc décider de baser mon algorithmes sur les dés du joueur seulement.
+ * 
+ *   Le but de mon algo est d'alors trouver les meilleurs mouvement afin d'atteindre l'objectif le plus proche.
+ *   Ensuite on cherche alors quelle est le meilleur dé partager à bouger afin de soutenir l'objectif visé par les dée du joueur.
+ * 
+ *   L'objectif choisi est toujours celui qui est le plus proche à atteindre. Si des objectifs sont tout aussi proche à atteindre,
+ *   Alors l'objectif le plus difficile sera choisi.
+ * 
+ * Résumé de l'approche : 
+ * 
+ * - L'IA base ses décisions sur les dés personnels du joueur.
+ * - Les dés partagés sont considérés comme un soutien potentiel mais
+ *   ne sont pas contrôlables directement, donc leur rôle est secondaire.
+ * - Pour chaque objectif non encore revendiqué, l'IA calcule les mouvements
+ *   optimaux des dés personnels pour se rapprocher des conditions nécessaires.
+ * - Les mouvements sont simulés avant d'être appliqués pour choisir l'action
+ *   la plus efficace.
+ *
+ * Stratégie de revendication :
+ * - L'IA revendique l'objectif le plus difficile disponible parmi ceux
+ *   atteignables, afin de maximiser les points.
+ *
+ * Fonctionnement général :
+ * 1) Initialisation des structures (joueurs, dés, objectifs).
+ * 2) Mise à jour des données à chaque tour.
+ * 3) Calcul des meilleurs mouvements pour les dés du joueur.
+ * 4) Simulation et application des mouvements.
+ * 5) Vérification et revendication des objectifs atteignables.
+ *
+ * Outils utilisés :
+ * - CHAT-GPT utilisé pour générer quelques fonction de debug.
+ *   Tous les algorithmes sont conçus et développé par l'auteur.
+ * - color-syntax : https://github.com/LePeruvienn/roll_for_the_milkyway/tree/main/color-syntax
+ */
+
 
 /**
 ----------------------------------
@@ -83,7 +139,7 @@ ENDSTRUCT
 /**
  * Reprent the data of moves on a list of dices (4 dices).
  * Used to get the best moves to do on a set of dices to achieve an objective.
- * IMPORTANT: use the `create_dices_moves_data` function to create a new dice data structure ptr
+ * IMPORTANT: use the `create_dices_moves` function to create a new dice data structure ptr
  */
 STRUCT dices_moves_data
 
@@ -94,55 +150,67 @@ STRUCT dices_moves_data
 
 ENDSTRUCT
 
-
 /**
 ----------------------------------
-           FONCTIONS
+           DEBUG
 ----------------------------------
 */
 
-// -- UTILS FUNCTIONS --
-
+/**
+ * Prints a `dices_moves_data` structur in stderr
+ * @param {dices_moves_data*} data
+ */
 FUNCTION print_dices_moves(data)
 
+	// check if ptr is null
 	IF(data == NULL)
 		PRINTERR("DICES_MOVES_DATA = NULL\n")
+
+	// If not null print his data
 	ELSE
 		PRINTERR("DICES_MOVES_DATA {\n")
 		
-		// Affichage de l'objectif ciblé
+		// targeted objective
 		IF(data->targeted_objective == NULL)
 			PRINTERR("  targeted_objective: NULL,\n")
 		ELSE
 			PRINTERR("  target_oid: ", INT, data->targeted_objective->oid, ",\n")
 		ENDIF
-
-		// Affichage du total de mouvements (gestion de l'infini)
+		
+		// moves amount
 		IF(data->total_moves_amount == cst_infinite)
 			PRINTERR("  total_moves: INFINITE,\n")
 		ELSE
 			PRINTERR("  total_moves: ", INT, data->total_moves_amount, ",\n")
 		ENDIF
 
-		// Affichage du détail par dé
+		// moves by dice array
 		PRINTERR("  moves_by_dice: [")
 		FOR(i; 0; cst_nb_dices)
+
 			PRINTERR(INT, data->moves_by_dice[i])
 			IF(i < cst_nb_dices - 1)
 				PRINTERR(", ")
 			ENDIF
+
 		ENDFOR
+
 		PRINTERR("]\n")
-		
 		PRINTERR("}\n")
 	ENDIF
 
 END
 
+/**
+ * Prints a `objective_data` structur in stderr
+ * @param {objective_data*} data
+ */
 FUNCTION print_objective(objective)
 
+	// check if ptr is null
 	IF(objective == NULL)
 		PRINTERR("OBJECTIVE = NULL\n")
+	// if not print his data
 	ELSE
 		PRINTERR("OBJECTIVE {\n")
 		PRINTERR("oid: ", INT, objective->oid, ",\n")
@@ -155,10 +223,16 @@ FUNCTION print_objective(objective)
 	ENDIF
 END
 
+/**
+ * Prints a `dice_data` structur in stderr
+ * @param {dice_data*} data
+ */
 FUNCTION print_dice(dice)
 
+	// check if ptr is null
 	IF(dice == NULL)
 		PRINTERR("DICE = NULL\n")
+	// if not print his data
 	ELSE
 		PRINTERR("DICE index=", INT, dice->index, " faces=[")
 		FOR(i;0;dice->length)
@@ -172,6 +246,10 @@ FUNCTION print_dice(dice)
 
 END
 
+/**
+ * Prints a `dice_data*` array in stderr
+ * @param {dice_data**} dices
+ */
 FUNCTION print_dices(dices)
 
 	FOR(i;0;cst_nb_dices)
@@ -180,19 +258,20 @@ FUNCTION print_dices(dices)
 
 END
 
+/**
+----------------------------------
+           FONCTIONS
+----------------------------------
+*/
 
-FUNCTION copy_array(array, size)
+// -- COPY FUNCTIONS --
 
-	new_array = MALLOC(size)
-
-	FOR(i;0;size)
-		new_array[i] = array[i]
-	ENDFOR
-
-	RETURN new_array
-	
-END
-
+/**
+ * copy `dices_moves_data*` source data into an other ptr.
+ * it does not allocate a new structure in memory !
+ * @param {dices_moves_data*} source
+ * @param {dices_moves_data*} dest
+ */
 FUNCTION copy_dices_moves_data(source, dest)
 
 	dest->targeted_objective = source->targeted_objective
@@ -204,6 +283,12 @@ FUNCTION copy_dices_moves_data(source, dest)
 
 END
 
+/**
+ * copy `objective_data*` source data into an other ptr.
+ * it does not allocate a new structure in memory !
+ * @param {dices_moves_data*} source
+ * @param {dices_moves_data*} dest
+ */
 FUNCTION copy_objective_data(source, dest)
 
 	dest->oid = source->oid
@@ -215,15 +300,12 @@ FUNCTION copy_objective_data(source, dest)
 
 END
 
-FUNCTION create_objective_copy(source)
+// -- RESET FUNCTIONS --
 
-	objective = create_objective()
-	copy_objective_data(source, objective)
-
-	RETURN objective
-	
-END
-
+/**
+ * Reset `dices_moves_data` structure data to default.
+ * @param {dices_moves_data*} data
+ */
 FUNCTION reset_dices_moves_data(data)
 	
 	data->targeted_objective = NULL
@@ -235,11 +317,6 @@ FUNCTION reset_dices_moves_data(data)
 
 END
 
-/** TODO
-FUNCTION simulate_moves_on(objective, dices, moves_by_dice)
-
-END
-*/
 
 // -- CREATE FUNCTIONS --
 
@@ -260,6 +337,21 @@ FUNCTION create_objective()
 	objective->is_claimed = FALSE
 
 	// returning structure ptr
+	RETURN objective
+	
+END
+
+/**
+ * `objective_data` copy constructor
+ *  create a new struct ptr with the source values
+ */
+FUNCTION create_objective_copy(source)
+
+	// create a new object
+	objective = create_objective() 
+	// coopy source data into it
+	copy_objective_data(source, objective)
+	// returning ptr
 	RETURN objective
 	
 END
@@ -413,7 +505,7 @@ END
 /**
  * `dices_moves_data` constructor
  */
-FUNCTION create_dices_moves_data()
+FUNCTION create_dices_moves()
 
 	// malloc struct
 	dices_moves = MALLOC_STRUCT(dices_moves_data)
@@ -430,6 +522,26 @@ FUNCTION create_dices_moves_data()
 
 	// return struct ptr
 	RETURN dices_moves
+END
+
+/**
+ * create a new array that is a copy of the source array
+ * @param {void*} array
+ * @param {int} size
+ */
+FUNCTION create_array_copy(array, size)
+
+	// malloc of new array
+	new_array = MALLOC(size)
+
+	// copy values into the new array
+	FOR(i;0;size)
+		new_array[i] = array[i]
+	ENDFOR
+
+	// return ptr
+	RETURN new_array
+	
 END
 
 // --- DESTROY FUNCTIONS ---
@@ -720,9 +832,13 @@ END
 
 /**
  * Set the `dices_moves_data` ptr with the best amount of moves and the move data to reach the objective in param.
+ * The goal of the functions is to find in the list of dices what are the best moves to be the closest to the objective in param.
+ *
+ * And the end of the function the best moves are set into dices_moves ptr.
+ *
  * @param {objective_data*} objective
  * @param {dice_data**} dices_array
- * @param {dices_moves*} dices_array
+ * @param {dices_moves_data*} dices_moves
  */
 FUNCTION get_best_dices_moves_for(objective, dices_array, dices_moves)
 
@@ -737,16 +853,22 @@ FUNCTION get_best_dices_moves_for(objective, dices_array, dices_moves)
 	nb_felems_needed[enum_mn] = objective->nb_fmn
 
 	// copy dices array
-	dices = copy_array(dices_array, cst_nb_dices)
+	dices = create_array_copy(dices_array, cst_nb_dices)
 	dices_left_amount = cst_nb_dices
 
 	// to prevent infinite loop (if all avaible dices cant reach OR have already reached the current objective)
+	// Element are considererd colmpleted if :
+	// - we already have completed the element amount neeeded.
+	// - no avaible dice can reach the element
 	element_completed_amount = 0
 
 	// check if objective is reached
 	is_objective_reached = FALSE
 
-	// While there is still dices lefts and 
+	// We keep try finding solution until :
+	// - we have no dices avaible left
+	// - we reached the objective
+	// - all element are completed (cannot be reachable or are already filled their nb element needed)
 	WHILE(dices_left_amount > 0 AND is_objective_reached == FALSE AND element_completed_amount < cst_nb_elements)
 
 		// reset element_completed_amount value
@@ -822,6 +944,7 @@ FUNCTION get_best_dices_moves_for(objective, dices_array, dices_moves)
 		ENDFOR
 
 		// check if current objective is reached
+		// The objective is considererd reached if all elements have reached their nb needed
 		is_objective_reached = (nb_felems_needed[enum_pe] == 0 AND nb_felems_needed[enum_h3] == 0 AND nb_felems_needed[enum_am] == 0 AND nb_felems_needed[enum_mn] == 0)
 
 	ENDWHILE
@@ -876,13 +999,22 @@ FUNCTION get_dice_distance_from(dice, element)
 
 END
 
+/**
+ * The goal of this function is to find the best dices moves to do in the current turn.
+ *
+ * - First we compute the best dices moves to reach each objective in this turn.
+ * - We keep the objective that requieres the less dices moves to be reached
+ * - We return the dices moves linked to that objective
+ *
+ * @param {dice_data**} dices
+ */
 FUNCTION get_best_dices_moves(dices)
 
 	// This ptr stores the best dices moves of all objective
-	best_dices_moves = create_dices_moves_data()
+	best_dices_moves = create_dices_moves()
 
 	// This ptr stores the result of the current objective
-	dices_moves_temp = create_dices_moves_data()
+	dices_moves_temp = create_dices_moves()
 
 	FOR(i;0;cst_nb_objectives)
 
@@ -931,19 +1063,32 @@ FUNCTION get_best_dices_moves(dices)
 	RETURN best_dices_moves
 END
 
+/**
+ * This function is used to simulate the dices moves on a targeted_objective
+ * It modify the targeted_objective nb element value to get a new objective,
+ * that is the nb elements left after the dices are moven.
+ * 
+ * @param {objective_data*} targeted_objective
+ * @param {int*} moves_by_dice
+ * @param {dice_data**} dices
+ */
 FUNCTION apply_moves_on(targeted_objective, moves_by_dice, dices)
 
+	// For each dices we apply the moves linked to it
 	FOR(i;0;cst_nb_dices)
 
+		// get dices data
 		dice = dices[i]
 		index = dice->index
 		faces = dice->faces
 		length = dice->length
 		move = moves_by_dice[i]
 
+		// get new index after move, and get the new linked element
 		new_index = (index + move + length) % length
 		elem = faces[new_index]
 
+		// remove 1 from the nb element needed of the objective
 		IF(elem == enum_pe AND targeted_objective->nb_fpe > 0)
 			targeted_objective->nb_fpe = targeted_objective->nb_fpe - 1
 		ELIF(elem == enum_h3 AND targeted_objective->nb_fh3 > 0)
@@ -960,18 +1105,32 @@ END
 
 // --- MAKE FUNCTIONS ---
 
+/**
+ * This function print the moves given in param.
+ * First it make the shared dices moves and the the player dices.
+ * 
+ * @param {dices_moves_data*} best_shared_dices_moves
+ * @param {dices_moves_data*} best_player_dices_moves
+ */
 FUNCTION make_moves(best_shared_dices_moves, best_player_dices_moves)
 
+	// get moves_by_dice data from best_shared_dices_moves
 	moves_by_dice = best_shared_dices_moves->moves_by_dice
 
+	// value to see if we already made a move on shared dices
+	// (we cant do more than 1 moves on the shared dices)
 	made_move = FALSE
 
+	// for each move
 	FOR(i;0;cst_nb_dices)
 
 		move_value = moves_by_dice[i]
 		
+		// if move value is 0 or we already made a move dont move this dice
 		IF(move_value == 0 OR made_move == TRUE)
 			PRINT("MOVE 0")
+		// else we make the dice move by the value given & set made_move to TRUE
+		// (it's either 1 or -1 depending of the move value sign, no other move value is allowed in the game)
 		ELIF(move_value > 0)
 			PRINT("MOVE 1")
 			made_move = TRUE
@@ -982,12 +1141,17 @@ FUNCTION make_moves(best_shared_dices_moves, best_player_dices_moves)
 
 	ENDFOR
 	
+	// get moves_by_dice data from player_shared_dices_moves
 	moves_by_dice = best_player_dices_moves->moves_by_dice
 
+	// for each dices we apply the moves
 	FOR(i;0;cst_nb_dices)
-
+	
+		// get move value
 		move_value = moves_by_dice[i]
 		
+		// make the dice move by the value given
+		// (it's either 1 or -1 depending of the move value sign, no other move value is allowed in the game)
 		IF(move_value > 0)
 			PRINT("MOVE 1")
 		ELIF(move_value == 0)
@@ -1000,6 +1164,13 @@ FUNCTION make_moves(best_shared_dices_moves, best_player_dices_moves)
 
 END
 
+/**
+ * This function check all objective that can be claimed,
+ * - we keep the objective that is the more difficult to reach
+ * - then make the player claim this objective
+ *
+ * (The more an objective is hard to reach to more point you get)
+ */
 FUNCTION make_claims()
 
 	best_objective = NULL
@@ -1038,6 +1209,9 @@ END
 
 // --- ROUND FUNCTIONS ---
 
+/**
+ * Function that initiliaze the data at the start of each round
+ */
 FUNCTION start_round()
 
 	update_players()
@@ -1047,6 +1221,14 @@ END
 
 // --- TURN FUNCTIONS ---
 
+/**
+ * Make the player play this turn :
+ * 
+ * 1) We search the best moves to do this turn
+ * 2) Then we apply theses moves on the game's dices
+ * 3) Then we update the dices value (cause other player can also moves the dices)
+ * 4) Then depending of the dices we claim the objectives
+ */
 FUNCTION play_turn()
 
 	// get player ptr
@@ -1054,16 +1236,23 @@ FUNCTION play_turn()
 
 	// Creating dices moves data
 	best_player_dices_moves = get_best_dices_moves(player->dices)
-	best_shared_dices_moves = create_dices_moves_data()
+	best_shared_dices_moves = create_dices_moves()
 
 	// Getting objective
 	targeted_objective = best_player_dices_moves->targeted_objective
 
+	// Before computing the best moves for the shared_dices we must **ensure that we are targeting some objective** !
+	// If there is no targeted_objective (cause all objective have been claimed)
+	// -> Dont compute best moves for shared_dices
 	IF (targeted_objective != NULL)
 
+		// copy objective to simulate previous computed dices move on the current objective
 		targeted_objective_copy = create_objective_copy(targeted_objective)
 		apply_moves_on(targeted_objective_copy, best_player_dices_moves->moves_by_dice, player->dices)
+
+		// get the best dices moves for the shared_dices for this objective
 		get_best_dices_moves_for(targeted_objective_copy, shared_dices, best_shared_dices_moves)
+
 		FREE(targeted_objective_copy)
 
 	ENDIF
@@ -1083,6 +1272,10 @@ FUNCTION play_turn()
 
 END
 
+/**
+ * Function used at the end of each turn.
+ * it's only used to collect all players scores
+ */
 FUNCTION end_turn()
 
 	update_scores()
@@ -1098,20 +1291,27 @@ END
 
 FUNCTION main()
 
+	// initilize script data (malloc & base values)
 	init()
 
 	PRINTERR("BOT MAXENCE ACTIVER :) \n")
 
+	// While the game is running 
 	WHILE(TRUE)
 
 		start_round()
 
+		// we play 6 turn for each round
 		FOR(i;0;6)
 			play_turn()
 			end_turn()
 		ENDFOR
 
 	ENDWHILE
-	
+
+	// no need to free global game ptr,
+	// they will be free when the programs stop
+	// (or do i must free them to get more points ?)
+
 END
 
